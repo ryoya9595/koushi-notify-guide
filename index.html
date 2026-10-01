@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>返し忘れ通知の仕組み</title>
+<meta name="description" content="Discordの質問部屋で、まだ誰も返していない質問を、担当の講師・運営に毎日10時と17時にLINEで知らせる「RISE講師通知」の仕組み解説。URLをClaude Codeに貼れば、会話しながら解説してくれます。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body.line{
+    --accent:#0e8a72;
+    --accent-deep:#0a6b58;
+    --accent-soft:#e2f3ee;
+    --code-bg:#1f3833;
+    --code-ink:#dff0ea;
+  }
+  .ai-box{border:2px dashed var(--accent);background:#fff;border-radius:16px;padding:20px 24px;margin-top:18px;font-size:.88rem;color:var(--ink-soft)}
+  .ai-box b{color:var(--ink)}
+  .ai-box code{background:var(--paper-2);padding:2px 8px;border-radius:6px;font-size:.8rem;word-break:break-all}
+  .card code{background:var(--paper-2);padding:2px 8px;border-radius:6px;font-size:.82rem}
+  .card .inline-cmd code{background:transparent;padding:0;font-size:inherit}
+
+  /* LINE通知の見本 */
+  .phone{background:#8cabd9;border-radius:18px;padding:18px 16px;margin-top:14px}
+  .phone .msg{background:#fff;border-radius:16px;padding:10px 14px;font-size:.84rem;color:var(--ink);max-width:420px;line-height:1.7}
+  .phone .cards{display:flex;gap:10px;overflow-x:auto;margin-top:10px;padding-bottom:4px}
+  .phone .qcard{flex:0 0 220px;background:#fff;border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .phone .qcard .qb{padding:12px 14px;flex-grow:1}
+  .phone .qcard b{font-size:.9rem}
+  .phone .qcard .t{display:block;font-size:.72rem;color:#888}
+  .phone .qcard p{font-size:.8rem;color:var(--ink);margin-top:6px;line-height:1.6}
+  .phone .qcard .end{font-size:.72rem;color:#e5673f;margin-top:6px;display:block}
+  .phone .qcard .qf{padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px}
+  .phone .qcard .btn{font-size:.76rem;font-weight:700;text-align:center;border-radius:8px;padding:7px 4px}
+  .phone .qcard .btn.sub{background:#eef0f2;color:#333}
+  .phone .qcard .btn.pri{background:#0e8a72;color:#fff}
+  @media(max-width:640px){.phone{padding:12px 10px}.phone .qcard{flex-basis:200px}}
+
+  /* 構成図 */
+  .arch{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;align-items:stretch}
+  .arch .box{background:var(--paper-2);border-radius:14px;padding:14px;font-size:.82rem;color:var(--ink-soft);position:relative}
+  .arch .box b{display:block;color:var(--ink);font-size:.92rem;margin-bottom:2px}
+  .arch .box .where{display:inline-block;font-size:.7rem;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:999px;padding:1px 9px;margin-bottom:6px;color:var(--accent-deep)}
+  .arch .box .n{font-family:'DM Mono',monospace;font-weight:700;color:var(--accent);margin-right:4px}
+  .arch .box.main{background:var(--accent-soft);border:1.5px solid var(--accent)}
+  .arch .arrow{grid-column:1/-1;text-align:center;font-size:.8rem;color:var(--ink-soft)}
+  @media(max-width:640px){.arch{grid-template-columns:1fr}}
+
+  table.rule{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:8px}
+  table.rule th,table.rule td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:top}
+  table.rule th{font-size:.78rem;color:var(--ink-soft);font-weight:700;letter-spacing:.04em}
+  table.rule td:first-child{font-weight:700;width:38%}
+  @media(min-width:641px){table.rule td:first-child{white-space:nowrap;width:auto}}
+  .tbl-wrap{overflow-x:auto}
+
+  .idea-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.idea-grid{grid-template-columns:1fr}}
+  .idea{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;font-size:.86rem;color:var(--ink-soft)}
+  .idea b{display:block;color:var(--ink);font-size:.95rem;margin-bottom:4px}
+  .tips li b{color:var(--ink)}
+</style>
+</head>
+<body class="line">
+
+<div class="topbar">
+  <div class="topbar-in">
+    <a class="logo" href="./">🔔 返し忘れ<span class="brain">通知</span>の仕組み</a>
+    <nav class="topnav">
+      <a href="#start">AIに解説してもらう</a>
+      <a href="#what">これは何？</a>
+      <a href="#flow">全体の流れ</a>
+      <a href="#rule">済みの判定</a>
+      <a href="#design">工夫</a>
+      <a href="#apply">応用</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="hero-badge accent">RISE講師通知 しくみ解説</div>
+  <h1>返し忘れた質問だけが、<br><span class="hl">LINEに届く。</span></h1>
+  <p class="lead">Discord の質問部屋で<strong>まだ誰も返していない質問</strong>を、担当の講師・運営に、毎日10時と17時に LINE で知らせる仕組みです。RISE で実際に動いているものを、仕事に応用できるように解説します。</p>
+  <div class="meta">
+    <span class="chip accent">Claude Code に貼るだけで解説</span>
+    <span class="chip">🍎 Mac / 🪟 Windows</span>
+    <span class="chip">運用費 0円（無料枠内）</span>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 AIに解説してもらう -->
+<section id="start">
+  <div class="sec-head"><div class="step-num">00</div><h2>Claude Code に解説してもらう</h2></div>
+  <div class="card">
+    <p>このページは読むだけでも分かるように書いていますが、いちばんのおすすめは <strong>Claude Code に解説してもらう</strong> こと。分からないところをその場で聞けて、最後に<strong>あなたの仕事に当てはめた形</strong>まで一緒に考えてくれます。</p>
+    <p>Claude Code を開いて（フォルダはどこでもOK）、下のメッセージをそのまま貼ってください。</p>
+  </div>
+  <div class="prompt-box">
+    <div class="prompt-head">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <span class="fname">Claude Code に貼るメッセージ</span>
+      <button class="copy-btn" data-target="explainPrompt">コピー</button>
+    </div>
+    <div class="prompt-scroll"><pre id="explainPrompt"></pre></div>
+  </div>
+  <div class="note tip" style="margin-top:16px"><span class="ico">💡</span><span>解説のあとに続けて、こう聞くのもおすすめです。</span></div>
+  <div class="inline-cmd"><code id="applyPrompt"></code><button class="copy-btn" data-target="applyPrompt">コピー</button></div>
+  <div class="note ok"><span class="ico">✅</span><span>解説してもらうだけなら、パソコンには何も作られません。実際に作る前には、Claude Code が必ず確認してくれます。</span></div>
+
+  <div class="ai-box">
+    🤖 <b>Claude Code へ：</b>このページのURLを渡されたら、「RISE講師通知」の仕組みの解説を頼まれています。解説書の原文 <code>https://ryoya9595.github.io/koushi-notify-guide/guide.md</code> を curl（Windows は <code>curl.exe</code>）で取得して全文を読み（作業フォルダには保存しない）、解説書の「解説の進め方」のとおりに、ユーザーと会話しながら説明してください。
+  </div>
+</section>
+
+<!-- 01 これは何 -->
+<section id="what">
+  <div class="sec-head"><div class="step-num">01</div><h2>これは何？ — 人が見張るのをやめる</h2></div>
+  <div class="ba">
+    <div class="card before">
+      <span class="tag">BEFORE</span>
+      <p><strong>講師がDiscordを見張る</strong></p>
+      <div class="bubble">本業の合間にDiscordを開いて、どれに返したか、どれがまだかを目で探す</div>
+      <div class="bubble">流れた質問に気づかず、受講生は「放置された…」</div>
+    </div>
+    <div class="card after">
+      <span class="tag">AFTER</span>
+      <p><strong>返していないものだけが届く</strong></p>
+      <div class="bubble">10時と17時に、まだの質問だけがLINEに来る。ボタンでその質問へ直行</div>
+      <div class="bubble">返信 or リアクションしたら、次から自動で来なくなる</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h3>📱 実際に届くLINE（見本）</h3>
+    <div class="phone">
+      <div class="msg">📮 Instagram質問部屋：まだ返信していない質問が2件あります<br>※Discordで返信 or リアクション、または下の「通知を止める」で止まります</div>
+      <div class="cards">
+        <div class="qcard">
+          <div class="qb"><b>① 受講生Aさん</b><span class="t">9/30 21:14・2通</span><p>リールの冒頭3秒で離脱されてしまいます。フックの作り方でおすすめの型はありますか？</p></div>
+          <div class="qf"><div class="btn sub">Discordで開く</div><div class="btn pri">🔕 この質問の通知を止める</div></div>
+        </div>
+        <div class="qcard">
+          <div class="qb"><b>② 受講生Bさん</b><span class="t">9/28 10:02</span><p>プロフィールのリンクが押せない状態になっています（画像あり）</p><span class="end">⏰今回で通知終了（3日たつため）</span></div>
+          <div class="qf"><div class="btn sub">Discordで開く</div><div class="btn pri">🔕 この質問の通知を止める</div></div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:12px;font-size:.84rem">※ 名前と本文は見本です。カードは横にスクロールできます。</p>
+  </div>
+</section>
+
+<!-- 02 全体の流れ -->
+<section id="flow">
+  <div class="sec-head"><div class="step-num">02</div><h2>全体の流れ — 5つの係で動いている</h2></div>
+  <div class="card">
+    <p>サーバーを借りたりパソコンをつけっぱなしにしたりせず、<strong>無料のサービスを5つ組み合わせて</strong>動いています。</p>
+    <div class="arch">
+      <div class="box"><span class="where">Cloudflare</span><b><span class="n">①</span>目覚まし係</b>毎日10:00と17:00ぴったりに「動いて」と合図する</div>
+      <div class="box main"><span class="where">GitHub Actions ＋ Python</span><b><span class="n">②</span>見回り係（本体）</b>Discordの質問部屋を読んで、返していない質問を選び、担当者ごとにまとめる</div>
+      <div class="box"><span class="where">LINE公式アカウント</span><b><span class="n">③</span>ポスト</b>担当者のLINEに質問カードを届ける</div>
+      <div class="arrow">↓ LINEで「🔕 通知を止める」が押されたら</div>
+      <div class="box"><span class="where">Vercel</span><b><span class="n">④</span>受付係</b>ボタンが押されたことを受け取る</div>
+      <div class="box"><span class="where">GitHub の Issue</span><b><span class="n">⑤</span>止めたものメモ</b>「この質問はもう通知しない」を書いておく</div>
+      <div class="box" style="background:transparent;border:1.5px dashed var(--line)">次の回で ② がこのメモを読んで、その質問を担当全員の通知から外す</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>⏰ なぜ目覚まし係が別にいるの？</h3>
+    <p>GitHub Actions にも「毎日○時に動く」機能はありますが、混んでいると<strong>数十分〜1時間以上遅れる</strong>ことがあります。10時に届くはずが11時になると困るので、時間に正確な Cloudflare から合図を送っています。</p>
+  </div>
+</section>
+
+<!-- 03 済みの判定 -->
+<section id="rule">
+  <div class="sec-head"><div class="step-num">03</div><h2>「済み」の判定 — この仕組みの心臓部</h2></div>
+  <div class="card">
+    <p>通知しすぎると誰も見なくなり、漏れると意味がない。<strong>どの質問を「もう通知しなくていい」とみなすか</strong>が、いちばん工夫したところです。</p>
+    <h3 style="margin-top:18px">講師・運営が、どれか1つをしたら「済み」</h3>
+    <div class="tbl-wrap">
+      <table class="rule">
+        <tr><th>したこと</th><th>見分け方</th></tr>
+        <tr><td>返信機能で返信</td><td>講師・運営のメッセージの「返信先」がその質問</td></tr>
+        <tr><td>スレッドで返信</td><td>その質問のスレッドに、講師・運営の投稿がある</td></tr>
+        <tr><td>@メンション</td><td>質問のあとに、講師・運営が質問者を @ している</td></tr>
+        <tr><td>リアクション</td><td>講師・運営がその質問にリアクションを押している</td></tr>
+        <tr><td>LINEのボタン</td><td>「🔕 この質問の通知を止める」が押された（担当全員分止まる）</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🙅 最初から通知しないもの</h3>
+    <ul>
+      <li><strong>短いお礼・あいさつだけ</strong>の投稿（「ありがとうございます！」「了解です」など）</li>
+      <li><strong>講師の回答へのお礼</strong>（長くても、質問が入っていなければ通知しない）</li>
+      <li><strong>3日たった</strong>質問（最後の回だけ「今回で通知終了」と書く）</li>
+    </ul>
+    <h3 style="margin-top:18px">🙆 でも、これは拾う</h3>
+    <ul>
+      <li>お礼つきでも<strong>「？」「教えて」「どうすれば」などが入っている</strong>もの（「ありがとうございます、もう1点…」）</li>
+      <li>文が短くても<strong>画像がついている</strong>もの（スクショで質問する人がいるため）</li>
+      <li>同じ人の<strong>30分以内の連投</strong>は、まとめて1件として扱う</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 04 工夫 -->
+<section id="design">
+  <div class="sec-head"><div class="step-num">04</div><h2>作るときに決めたこと — 続く通知のコツ</h2></div>
+  <div class="card">
+    <ol class="tips">
+      <li><b>「済み」は、いつもの動作で判定する。</b>「対応したらLINEに『済』と送ってね」は手間が増えて続かないので採用しませんでした。Discordで返す・リアクションする、がそのまま「済み」になります。</li>
+      <li><b>0件の日は送らない。1人1通にまとめる。</b>「異常なし」は送らない。来たら必ず見る価値がある、という状態を保ちます。</li>
+      <li><b>3日で自動終了。</b>ずっと残ると「いつものやつ」になって見なくなるので、区切ります。</li>
+      <li><b>通知専用のLINEアカウントを新しく作る。</b>個人用の通知LINEと混ぜないことで、余計な自動返信が講師に届かず、無料の送信枠も分けられます。</li>
+      <li><b>登録は「LINEに何か送るだけ」。</b>届いたメッセージのLINE表示名から、送り先を自動で見つけて紐づけます。誰か分からない人から届いたら、作った人に知らせます。</li>
+      <li><b>作った人も見守り役で受け取る。</b>判定がおかしくないか、しばらく全部屋の通知を見ています。</li>
+      <li><b>テストしやすくしておく。</b>「送らずに中身だけ見る」「自分1人にだけ送る」を、GitHub の画面のボタンから実行できます。</li>
+    </ol>
+  </div>
+</section>
+
+<!-- 05 応用 -->
+<section id="apply">
+  <div class="sec-head"><div class="step-num">05</div><h2>仕事に応用する — 6つ決めれば置き換えられる</h2></div>
+  <div class="card">
+    <p>この仕組みは言いかえると、<strong>「どこかに溜まる『対応待ち』を、対応されるまで、担当者に、ちょうどいい頻度で知らせる」</strong>仕組みです。次の6つを決めれば、別の仕事にもそのまま使えます。</p>
+    <div class="tbl-wrap">
+      <table class="rule">
+        <tr><th>決めること</th><th>RISE講師通知では</th></tr>
+        <tr><td>① どこを見張る？</td><td>Discordの質問部屋</td></tr>
+        <tr><td>② 何が「対応待ち」？</td><td>講師・運営以外の投稿</td></tr>
+        <tr><td>③ 何をしたら「済み」？</td><td>返信・リアクション・ボタン</td></tr>
+        <tr><td>④ 誰に知らせる？</td><td>部屋ごとの担当者</td></tr>
+        <tr><td>⑤ いつ・どれくらい？</td><td>毎日10時・17時、3日で終了</td></tr>
+        <tr><td>⑥ どこに知らせる？</td><td>LINE</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="idea-grid">
+    <div class="idea"><b>💬 チャットの返し忘れ</b>Chatwork・Slack で自分宛てのメンションに返していないものを、夕方にまとめて</div>
+    <div class="idea"><b>📝 問い合わせの対応漏れ</b>Googleフォームの回答シートで「対応状況」が空の行を、担当者に毎朝</div>
+    <div class="idea"><b>📅 期限の近いタスク</b>スプレッドシートの案件表で、期限3日前・前日・当日のものを</div>
+    <div class="idea"><b>📨 お客さんへの返信待ち</b>Gmail で、お客さんから来て返していないメールを1日1回</div>
+  </div>
+  <div class="note tip" style="margin-top:18px"><span class="ico">💡</span><span>どれが自分に合うかは、00 のメッセージで Claude Code に解説してもらったあと、「私の仕事に当てはめるなら？」と聞くと、質問しながら一緒に考えてくれます。</span></div>
+  <div class="note warn"><span class="ico">⚠️</span><span><strong>会社の情報やお客さんの個人情報を扱う場合は、外のサービス（GitHub など）に置いてよいか、先に会社のルールを確認してください。</strong>合言葉（APIキーなど）はチャットに貼らないでください。</span></div>
+  <div class="card" style="margin-top:18px">
+    <h3>🛠 実際に作るなら</h3>
+    <p>「決まった時間に見回って、あれば1通にまとめてLINEに送る」部分は、RISEで公開している <a href="https://ryoya9595.github.io/line-notify-kit/" style="color:var(--accent-deep);font-weight:700">LINE通知キット</a> がそのまま土台になります。最初は<strong>「自分1人に・1か所だけ・1日1回」</strong>から始めて、動くのを確かめてから増やすのがおすすめです。</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-in">
+    <span>🔔 返し忘れ通知の仕組み（RISE講師通知）</span>
+    <span>制作：関 諒也</span>
+  </div>
+</footer>
+
+<div id="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
