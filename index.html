@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>返し忘れ通知の仕組み</title>
-<meta name="description" content="Discordの質問部屋で、まだ誰も返していない質問を、担当の講師・運営に毎日10時と17時にLINEで知らせる「RISE講師通知」の仕組み解説。URLをClaude Codeに貼れば、会話しながら解説してくれます。">
+<meta name="description" content="Discordの質問部屋で、まだ誰も返していない質問を、担当の講師・運営に毎日8時と17時にLINEで知らせる「RISE講師通知」の仕組み解説。URLをClaude Codeに貼れば、会話しながら解説してくれます。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -82,7 +82,7 @@
 <header class="hero">
   <div class="hero-badge accent">RISE講師通知 しくみ解説</div>
   <h1>返し忘れた質問だけが、<br><span class="hl">LINEに届く。</span></h1>
-  <p class="lead">Discord の質問部屋で<strong>まだ誰も返していない質問</strong>を、担当の講師・運営に、毎日10時と17時に LINE で知らせる仕組みです。RISE で実際に動いているものを、仕事に応用できるように解説します。</p>
+  <p class="lead">Discord の質問部屋で<strong>まだ誰も返していない質問</strong>を、担当の講師・運営に、毎日8時と17時に LINE で知らせる仕組みです。RISE で実際に動いているものを、仕事に応用できるように解説します。</p>
   <div class="meta">
     <span class="chip accent">Claude Code に貼るだけで解説</span>
     <span class="chip">🍎 Mac / 🪟 Windows</span>
@@ -129,7 +129,7 @@
     <div class="card after">
       <span class="tag">AFTER</span>
       <p><strong>返していないものだけが届く</strong></p>
-      <div class="bubble">10時と17時に、まだの質問だけがLINEに来る。ボタンでその質問へ直行</div>
+      <div class="bubble">8時と17時に、まだの質問だけがLINEに来る。ボタンでその質問へ直行</div>
       <div class="bubble">返信 or リアクションしたら、次から自動で来なくなる</div>
     </div>
   </div>
@@ -159,7 +159,7 @@
   <div class="card">
     <p>サーバーを借りたりパソコンをつけっぱなしにしたりせず、<strong>無料のサービスを5つ組み合わせて</strong>動いています。</p>
     <div class="arch">
-      <div class="box"><span class="where">Cloudflare</span><b><span class="n">①</span>目覚まし係</b>毎日10:00と17:00ぴったりに「動いて」と合図する</div>
+      <div class="box"><span class="where">Cloudflare</span><b><span class="n">①</span>目覚まし係</b>毎日8:00と17:00ぴったりに「動いて」と合図する</div>
       <div class="box main"><span class="where">GitHub Actions ＋ Python</span><b><span class="n">②</span>見回り係（本体）</b>Discordの質問部屋を読んで、返していない質問を選び、担当者ごとにまとめる</div>
       <div class="box"><span class="where">LINE公式アカウント</span><b><span class="n">③</span>ポスト</b>担当者のLINEに質問カードを届ける</div>
       <div class="arrow">↓ LINEで「🔕 通知を止める」が押されたら</div>
@@ -170,7 +170,7 @@
   </div>
   <div class="card">
     <h3>⏰ なぜ目覚まし係が別にいるの？</h3>
-    <p>GitHub Actions にも「毎日○時に動く」機能はありますが、混んでいると<strong>数十分〜1時間以上遅れる</strong>ことがあります。10時に届くはずが11時になると困るので、時間に正確な Cloudflare から合図を送っています。</p>
+    <p>GitHub Actions にも「毎日○時に動く」機能はありますが、混んでいると<strong>数十分〜1時間以上遅れる</strong>ことがあります。8時に届くはずが9時になると困るので、時間に正確な Cloudflare から合図を送っています。</p>
   </div>
 </section>
 
@@ -235,7 +235,7 @@
         <tr><td>② 何が「対応待ち」？</td><td>講師・運営以外の投稿</td></tr>
         <tr><td>③ 何をしたら「済み」？</td><td>返信・リアクション・ボタン</td></tr>
         <tr><td>④ 誰に知らせる？</td><td>部屋ごとの担当者</td></tr>
-        <tr><td>⑤ いつ・どれくらい？</td><td>毎日10時・17時、3日で終了</td></tr>
+        <tr><td>⑤ いつ・どれくらい？</td><td>毎日8時・17時、3日で終了</td></tr>
         <tr><td>⑥ どこに知らせる？</td><td>LINE</td></tr>
       </table>
     </div>
